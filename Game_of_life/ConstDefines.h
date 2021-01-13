@@ -31,5 +31,9 @@ enum class GENDER
 	MALE, FEMALE
 };
 
+enum class TYPE
+{
+	PREDATOR, PREY
+};
 
 #endif // !_DEFINES_

@@ -109,22 +109,15 @@ void Manager::stopGame()
 
 void Manager::tick()
 {
-	unsigned int preds{ 0 };
-	unsigned int preys{ 0 };
-	for (size_t i = 0; i < m_width; ++i)
-	{
-		for (size_t j = 0; j < m_height; ++j)
-		{
-			preds += m_gameField[i][j].predators.size();
-			preys += m_gameField[i][j].preys.size();
-		}
-	}
-	std::printf("Number of preys:%i\nNumber of predators:%i\n",
-		preys, preds);
+	displayAnimalsQuantity();
+
 	calculateAnimalsMoves();
 	moveAnimals();
 	calculateActions();
-	displayInfo();
+
+	displayActionsInfo();
+	displayAnimalsQuantity();
+	
 	clearTurnData();
 }
 
@@ -132,14 +125,11 @@ void Manager::clearTurnData()
 {
 	eaten = diedOfHunger = bornPreds = bornPreys = 0;
 }
-void Manager::displayInfo()
+
+void Manager::displayAnimalsQuantity()
 {
 	unsigned int preds{ 0 };
 	unsigned int preys{ 0 };
-
-	std::printf("Eaten preys: %i\nPredators died of hunger:%i\nBorn predators:%i\nBorn preys: %i\n",
-		eaten, diedOfHunger, bornPreds, bornPreys);
-
 	for (size_t i = 0; i < m_width; ++i)
 	{
 		for (size_t j = 0; j < m_height; ++j)
@@ -152,194 +142,157 @@ void Manager::displayInfo()
 		preys, preds);
 }
 
+void Manager::displayActionsInfo()
+{
+	unsigned int preds{ 0 };
+	unsigned int preys{ 0 };
+
+	std::printf("Eaten preys: %i\nPredators died of hunger:%i\nBorn predators:%i\nBorn preys: %i\n",
+		eaten, diedOfHunger, bornPreds, bornPreys);
+}
+
 void Manager::calculateAnimalsMoves()
 {
-	std::default_random_engine engine;
-	engine.seed(std::chrono::system_clock::now().time_since_epoch().count());
-	std::uniform_int_distribution<int> moveDist(0, 7);
-
 	for (unsigned int i = 0; i < m_width; ++i)
 	{
 		for (unsigned int j = 0; j < m_height; ++j)
 		{
-			for (size_t x = 0; x < m_gameField[i][j].predators.size(); ++x)
-			{
-				while (!determineIfMoveIsValid<Predator>(i, j, (ANIMAL_MOVE)moveDist(engine), m_gameField[i][j].predators[x]))
-				{
-
-				}
-			}
-
-			for (size_t x = 0; x < m_gameField[i][j].preys.size(); ++x)
-			{
-				while (!determineIfMoveIsValid<Prey>(i, j, (ANIMAL_MOVE)moveDist(engine), m_gameField[i][j].preys[x]))
-				{
-		
-				}
-			}
-			
+			determineValidMoves(i, j, m_gameField[i][j].predators);
+			determineValidMoves(i, j, m_gameField[i][j].preys);
 		}
 	}
 }
 
 template <class AnimalType>
-bool Manager::determineIfMoveIsValid(unsigned int i, unsigned int j, ANIMAL_MOVE _move, AnimalType * _animal)
+void Manager::determineValidMoves(unsigned int i, unsigned int j, std::vector<AnimalType*> & _animalsVector)
 {
-	switch (_move)
-	{
-	case ANIMAL_MOVE::TOP:
-		if (j <= (m_height - 2))
-		{
-			_animal->setAnimalMove(ANIMAL_MOVE::TOP);
-			return true;
-		}
-		break;
-	case ANIMAL_MOVE::TOP_RIGHT:
-		if (i <= (m_width - 2) && j <= (m_height - 2))
-		{
-			_animal->setAnimalMove(ANIMAL_MOVE::TOP_RIGHT);
-			return true;
-		}
-		break;
-	case ANIMAL_MOVE::RIGHT:
-		if (i <= (m_width - 2))
-		{
-			_animal->setAnimalMove(ANIMAL_MOVE::RIGHT);
-			return true;
-		}
-		break;
-	case ANIMAL_MOVE::BOTTOM_RIGHT:
-		if (i <= (m_width - 2) && j != 0)
-		{
-			_animal->setAnimalMove(ANIMAL_MOVE::BOTTOM_RIGHT);
-			return true;
-		}
-		break;
-	case ANIMAL_MOVE::BOTTOM:
-		if (j != 0)
-		{
-			_animal->setAnimalMove(ANIMAL_MOVE::BOTTOM);
-			return true;
-		}
-		break;
-	case ANIMAL_MOVE::BOTTOM_LEFT:
-		if (i != 0 && j != 0)
-		{
-			_animal->setAnimalMove(ANIMAL_MOVE::BOTTOM_LEFT);
-			return true;
-		}
-		break;
-	case ANIMAL_MOVE::LEFT:
-		if (i != 0)
-		{
-			_animal->setAnimalMove(ANIMAL_MOVE::LEFT);
-			return true;
-		}
-		break;
-	case ANIMAL_MOVE::LEFT_TOP:
-		if (i != 0 && j <= (m_height - 2))
-		{
-			_animal->setAnimalMove(ANIMAL_MOVE::LEFT_TOP);
-			return true;
-		}
-		break;
-	}
-	return false;
-}
+	std::default_random_engine engine;
+	engine.seed(std::chrono::system_clock::now().time_since_epoch().count());
+	std::uniform_int_distribution<int> moveDist(0, 7);
 
-bool Manager::moveAnimals()
-{
-for (unsigned int i = 0; i < m_width; ++i)
-{
-	for (unsigned int j = 0; j < m_height; ++j)
+	for (size_t index = 0; index < _animalsVector.size(); ++index)
 	{
-		for (size_t x = 0; x < m_gameField[i][j].predators.size(); ++x)
+		bool moveIsInvalid = true;
+		while (moveIsInvalid)
 		{
-			ANIMAL_MOVE moveToMake = m_gameField[i][j].predators[x]->getAnimalMove();
-			m_gameField[i][j].predators[x]->setAnimalMove(ANIMAL_MOVE::NONE);
-			switch (moveToMake)
+			switch ((ANIMAL_MOVE)moveDist(engine))
 			{
 			case ANIMAL_MOVE::TOP:
-				m_gameField[i][j + 1].addPredator(std::move(m_gameField[i][j].predators[x]));
+				if (j <= (m_height - 2))
+				{
+					_animalsVector[index]->setAnimalMove(ANIMAL_MOVE::TOP);
+					moveIsInvalid = false;
+				}
 				break;
 			case ANIMAL_MOVE::TOP_RIGHT:
-				m_gameField[i + 1][j + 1].addPredator(std::move(m_gameField[i][j].predators[x]));
+				if (i <= (m_width - 2) && j <= (m_height - 2))
+				{
+					_animalsVector[index]->setAnimalMove(ANIMAL_MOVE::TOP_RIGHT);
+					moveIsInvalid = false;
+				}
 				break;
 			case ANIMAL_MOVE::RIGHT:
-				m_gameField[i + 1][j].addPredator(std::move(m_gameField[i][j].predators[x]));
+				if (i <= (m_width - 2))
+				{
+					_animalsVector[index]->setAnimalMove(ANIMAL_MOVE::RIGHT);
+					moveIsInvalid = false;
+				}
 				break;
 			case ANIMAL_MOVE::BOTTOM_RIGHT:
-				m_gameField[i + 1][j - 1].addPredator(std::move(m_gameField[i][j].predators[x]));
+				if (i <= (m_width - 2) && j != 0)
+				{
+					_animalsVector[index]->setAnimalMove(ANIMAL_MOVE::BOTTOM_RIGHT);
+					moveIsInvalid = false;
+				}
 				break;
 			case ANIMAL_MOVE::BOTTOM:
-				m_gameField[i][j - 1].addPredator(std::move(m_gameField[i][j].predators[x]));
+				if (j != 0)
+				{
+					_animalsVector[index]->setAnimalMove(ANIMAL_MOVE::BOTTOM);
+					moveIsInvalid = false;
+				}
 				break;
 			case ANIMAL_MOVE::BOTTOM_LEFT:
-				m_gameField[i - 1][j - 1].addPredator(std::move(m_gameField[i][j].predators[x]));
+				if (i != 0 && j != 0)
+				{
+					_animalsVector[index]->setAnimalMove(ANIMAL_MOVE::BOTTOM_LEFT);
+					moveIsInvalid = false;
+				}
 				break;
 			case ANIMAL_MOVE::LEFT:
-				m_gameField[i - 1][j].addPredator(std::move(m_gameField[i][j].predators[x]));
+				if (i != 0)
+				{
+					_animalsVector[index]->setAnimalMove(ANIMAL_MOVE::LEFT);
+					moveIsInvalid = false;
+				}
 				break;
 			case ANIMAL_MOVE::LEFT_TOP:
-				m_gameField[i - 1][j + 1].addPredator(std::move(m_gameField[i][j].predators[x]));
-				break;
-			case ANIMAL_MOVE::NONE:
-				break;
-			}
-
-			if (moveToMake != ANIMAL_MOVE::NONE)
-			{
-				m_gameField[i][j].predators[x] = nullptr;
-				m_gameField[i][j].predators.erase(m_gameField[i][j].predators.begin() + x);
-			}
-		}
-
-
-		for (size_t x = 0; x < m_gameField[i][j].preys.size(); ++x)
-		{
-			ANIMAL_MOVE moveToMake = m_gameField[i][j].preys[x]->getAnimalMove();
-			m_gameField[i][j].preys[x]->setAnimalMove(ANIMAL_MOVE::NONE);
-			switch (moveToMake)
-			{
-			case ANIMAL_MOVE::TOP:
-				m_gameField[i][j + 1].addPrey(std::move(m_gameField[i][j].preys[x]));
-				break;
-			case ANIMAL_MOVE::TOP_RIGHT:
-				m_gameField[i + 1][j + 1].addPrey(std::move(m_gameField[i][j].preys[x]));
-				break;
-			case ANIMAL_MOVE::RIGHT:
-				m_gameField[i + 1][j].addPrey(std::move(m_gameField[i][j].preys[x]));
-				break;
-			case ANIMAL_MOVE::BOTTOM_RIGHT:
-				m_gameField[i + 1][j - 1].addPrey(std::move(m_gameField[i][j].preys[x]));
-				break;
-			case ANIMAL_MOVE::BOTTOM:
-				m_gameField[i][j - 1].addPrey(std::move(m_gameField[i][j].preys[x]));
-				break;
-			case ANIMAL_MOVE::BOTTOM_LEFT:
-				m_gameField[i - 1][j - 1].addPrey(std::move(m_gameField[i][j].preys[x]));
-				break;
-			case ANIMAL_MOVE::LEFT:
-				m_gameField[i - 1][j].addPrey(std::move(m_gameField[i][j].preys[x]));
-				break;
-			case ANIMAL_MOVE::LEFT_TOP:
-				m_gameField[i - 1][j + 1].addPrey(std::move(m_gameField[i][j].preys[x]));
-				break;
-			case ANIMAL_MOVE::NONE:
+				if (i != 0 && j <= (m_height - 2))
+				{
+					_animalsVector[index]->setAnimalMove(ANIMAL_MOVE::LEFT_TOP);
+					moveIsInvalid = false;
+				}
 				break;
 			}
-
-			if (moveToMake != ANIMAL_MOVE::NONE)
-			{
-				m_gameField[i][j].preys[x] = nullptr;
-				m_gameField[i][j].preys.erase(m_gameField[i][j].preys.begin() + x);
-			}
-
 		}
 	}
 }
-debug = true;
-return true;
+
+void Manager::moveAnimals()
+{
+	for (unsigned int i = 0; i < m_width; ++i)
+	{
+		for (unsigned int j = 0; j < m_height; ++j)
+		{
+			moveBasedOnType<Predator>(m_gameField[i][j].predators, TYPE::PREDATOR, i, j);
+			moveBasedOnType<Prey>(m_gameField[i][j].preys, TYPE::PREY, i, j);
+		}
+	}
+}
+
+template <class AnimalType>
+void Manager::moveBasedOnType(std::vector<AnimalType*>& _animalVector, TYPE _animalType, unsigned int _row, unsigned int _col)
+{
+	for (size_t index = 0; index < _animalVector.size(); ++index)
+	{
+		ANIMAL_MOVE moveToMake = _animalVector[index]->getAnimalMove();
+		_animalVector[index]->setAnimalMove(ANIMAL_MOVE::NONE);
+		switch (moveToMake)
+		{
+		case ANIMAL_MOVE::TOP:
+			m_gameField[_row][_col + 1].addAnimal(std::move(_animalVector[index]), _animalType);
+			break;
+		case ANIMAL_MOVE::TOP_RIGHT:
+			m_gameField[_row + 1][_col + 1].addAnimal(std::move(_animalVector[index]), _animalType);
+			break;
+		case ANIMAL_MOVE::RIGHT:
+			m_gameField[_row + 1][_col].addAnimal(std::move(_animalVector[index]), _animalType);
+			break;
+		case ANIMAL_MOVE::BOTTOM_RIGHT:
+			m_gameField[_row + 1][_col - 1].addAnimal(std::move(_animalVector[index]), _animalType);
+			break;
+		case ANIMAL_MOVE::BOTTOM:
+			m_gameField[_row][_col - 1].addAnimal(std::move(_animalVector[index]), _animalType);
+			break;
+		case ANIMAL_MOVE::BOTTOM_LEFT:
+			m_gameField[_row - 1][_col - 1].addAnimal(std::move(_animalVector[index]), _animalType);
+			break;
+		case ANIMAL_MOVE::LEFT:
+			m_gameField[_row - 1][_col].addAnimal(std::move(_animalVector[index]), _animalType);
+			break;
+		case ANIMAL_MOVE::LEFT_TOP:
+			m_gameField[_row - 1][_col + 1].addAnimal(std::move(_animalVector[index]), _animalType);
+			break;
+		case ANIMAL_MOVE::NONE:
+			break;
+		}
+
+		if (moveToMake != ANIMAL_MOVE::NONE)
+		{
+			_animalVector[index] = nullptr;
+			_animalVector.erase(_animalVector.begin() + index);
+		}
+	}
 }
 
 void Manager::calculateActions()
@@ -464,16 +417,7 @@ void Manager::addAnimalsRandomly(unsigned int _numOfPreds, unsigned int _numOfPr
 		posX = posX_dist(engine);
 		posY = posY_dist(engine);
 
-		switch (animalGender(engine))
-		{
-		case 0:
-			m_gameField[posX][posY].addPrey(new Prey(GENDER::MALE));
-			break;
-		case 1:
-			m_gameField[posX][posY].addPrey(new Prey(GENDER::FEMALE));
-			break;
-		}
-
+		m_gameField[posX][posY].addAnimal(new Prey(GENDER(animalGender(engine))), TYPE::PREY);
 	}
 
 	for (int i = 0; i < _numOfPreds; ++i)
@@ -481,15 +425,7 @@ void Manager::addAnimalsRandomly(unsigned int _numOfPreds, unsigned int _numOfPr
 		posX = posX_dist(engine);
 		posY = posY_dist(engine);
 
-		switch (animalGender(engine))
-		{
-		case 0:
-			m_gameField[posX][posY].addPredator(new Predator(GENDER::MALE));
-			break;
-		case 1:
-			m_gameField[posX][posY].addPredator(new Predator(GENDER::FEMALE));
-			break;
-		}
+		m_gameField[posX][posY].addAnimal(new Predator(GENDER(animalGender(engine))),TYPE::PREDATOR);
 
 	}
 
@@ -503,27 +439,13 @@ void Manager::addAnimalsOnCoords(unsigned int _preds, unsigned int _preys, unsig
 
 	for (size_t i = 0; i < _preds; ++i)
 	{
-		if (genderDist(engine) == 0)
-		{
-			m_gameField[_i][_j].addPredator(new Predator(GENDER::MALE));
-		}
-		else
-		{
-			m_gameField[_i][_j].addPredator(new Predator(GENDER::FEMALE));
-		}
+		m_gameField[_i][_j].addAnimal(new Predator(GENDER(genderDist(engine))), TYPE::PREDATOR);
 		bornPreds++;
 	}
 
 	for (size_t i = 0; i < _preys; ++i)
 	{
-		if (genderDist(engine) == 0)
-		{
-			m_gameField[_i][_j].addPrey(new Prey(GENDER::MALE));
-		}
-		else
-		{
-			m_gameField[_i][_j].addPrey(new Prey(GENDER::FEMALE));
-		}
+		m_gameField[_i][_j].addAnimal(new Prey(GENDER(genderDist(engine))), TYPE::PREY);
 		bornPreys++;
 	}
 

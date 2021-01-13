@@ -13,14 +13,24 @@
 struct Field
 {
 	
-	void addPredator(Predator* predator)
+	template<class AnimalType>
+	bool addAnimal(AnimalType* animal, const TYPE animalType)
 	{
-		predators.push_back(predator);
-	}
+		if (animal == nullptr)
+		{
+			return false;
+		}
 
-	void addPrey(Prey* prey)
-	{
-		preys.push_back(prey);
+		switch (animalType)
+		{
+		case TYPE::PREDATOR:
+			predators.push_back((Predator*)animal);
+			break;
+		case TYPE::PREY:
+			preys.push_back((Prey*)animal);
+				break;
+		}
+		return true;
 	}
 
 	bool hasPredators() 
@@ -35,15 +45,6 @@ struct Field
 		if (preys.size() > 0)
 			return true;
 		return false;
-	}
-
-	void clearDeadAnimals()
-	{
-		predators.erase(std::remove(predators.begin(), predators.end(), nullptr),
-			predators.end());
-
-		preys.erase(std::remove(preys.begin(), preys.end(), nullptr),
-			preys.end());
 	}
 
 	std::vector<Predator*> predators;
@@ -78,13 +79,18 @@ public:
 private:
 
 	 void clearTurnData();
-	 void displayInfo();
+	 void displayActionsInfo();
+	 void displayAnimalsQuantity();
 
 	 void calculateAnimalsMoves();
-	 bool moveAnimals();
 
 	 template <class AnimalType>
-	 bool determineIfMoveIsValid(unsigned int i, unsigned int j, ANIMAL_MOVE _move, AnimalType* _animal);
+	 void determineValidMoves(unsigned int i, unsigned int j, std::vector<AnimalType*> & _animalsVector);
+
+	 template <class AnimalType>
+	 void moveBasedOnType(std::vector<AnimalType*> &_animalVector, TYPE _animalType, unsigned int _row, unsigned int _col);
+
+     void moveAnimals();
 
 	 void create_gameField();
 	 void fill_gameField();
